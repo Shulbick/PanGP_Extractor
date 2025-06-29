@@ -1,0 +1,36 @@
+name: Build Windows .sln Project
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Locate .sln file
+      id: locate-sln
+      run: |
+        $sln = Get-ChildItem -Path . -Filter *.sln -Recurse | Select-Object -First 1
+        echo "Found solution file: $($sln.FullName)"
+        echo "##[set-output name=solution_path]$($sln.FullName)"
+      shell: pwsh
+
+    - name: Build Solution (.sln)
+      run: msbuild "${{ steps.locate-sln.outputs.solution_path }}" /p:Configuration=Release
+
+    - name: Upload .exe artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-executable
+        path: |
+          **\*.exe
+          !**\*.test.exe
